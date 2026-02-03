@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Database
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+database.sqlite
+database.sqlite3
+prisma/database.sqlite
+prisma/*.sqlite-journal
+
+# Coverage
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.test
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

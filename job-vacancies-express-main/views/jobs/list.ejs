@@ -1,0 +1,91 @@
+
+<div class="mb-8">
+  <h1 class="text-4xl font-bold text-gray-900 mb-2">Job Vacancies</h1>
+  <p class="text-gray-600 text-lg">Find your dream job today</p>
+</div>
+
+<div id="loading" class="text-center py-8 text-gray-600">Loading jobs...</div>
+<div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden"></div>
+
+<div id="jobs-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+  <!-- Jobs will be loaded here -->
+</div>
+
+<div id="pagination" class="flex justify-center items-center gap-4 mt-8 hidden"></div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadJobs();
+  });
+
+  async function loadJobs(page = 1) {
+    try {
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('error-message').classList.add('hidden');
+      
+      const response = await fetch(`/api/vacancies/public?page=${page}&limit=10`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load jobs');
+      }
+
+      displayJobs(data.vacancies);
+      displayPagination(data.pagination);
+      document.getElementById('loading').classList.add('hidden');
+    } catch (error) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('error-message').classList.remove('hidden');
+      document.getElementById('error-message').textContent = error.message;
+    }
+  }
+
+  function displayJobs(jobs) {
+    const container = document.getElementById('jobs-container');
+    if (jobs.length === 0) {
+      container.innerHTML = '<p class="text-center py-12 text-gray-600 col-span-full">No job vacancies available at the moment.</p>';
+      return;
+    }
+
+    container.innerHTML = jobs.map(job => `
+      <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+        <h3 class="text-xl font-semibold mb-3">
+          <a href="/jobs/${job.id}" class="text-gray-900 hover:text-blue-600 transition">${escapeHtml(job.title)}</a>
+        </h3>
+        <div class="space-y-2 mb-4 text-sm text-gray-600">
+          <div class="font-medium text-gray-900">${escapeHtml(job.company)}</div>
+          <div>📍 ${escapeHtml(job.location)}</div>
+          ${job.salary ? `<div>💰 ${escapeHtml(job.salary)}</div>` : ''}
+        </div>
+        <p class="text-xs text-gray-500 mb-4">Posted: ${new Date(job.createdAt).toLocaleDateString()}</p>
+        <a href="/jobs/${job.id}" class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">View Details</a>
+      </div>
+    `).join('');
+  }
+
+  function displayPagination(pagination) {
+    if (pagination.totalPages <= 1) {
+      document.getElementById('pagination').classList.add('hidden');
+      return;
+    }
+
+    const paginationEl = document.getElementById('pagination');
+    paginationEl.classList.remove('hidden');
+    
+    let html = '';
+    if (pagination.page > 1) {
+      html += `<button onclick="loadJobs(${pagination.page - 1})" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Previous</button>`;
+    }
+    html += `<span class="text-gray-600">Page ${pagination.page} of ${pagination.totalPages}</span>`;
+    if (pagination.page < pagination.totalPages) {
+      html += `<button onclick="loadJobs(${pagination.page + 1})" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Next</button>`;
+    }
+    paginationEl.innerHTML = html;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>

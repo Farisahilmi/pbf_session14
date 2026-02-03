@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  name      String
+  role      String    @default("MEMBER") // ADMIN or MEMBER
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  createdVacancies JobVacancy[]
+  applications     Application[]
+
+  @@map("users")
+}
+
+model JobVacancy {
+  id           Int       @id @default(autoincrement())
+  title        String
+  company      String
+  location     String
+  description  String
+  requirements String
+  salary       String?
+  status       String    @default("ACTIVE") // ACTIVE or CLOSED
+  createdBy    Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  creator      User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@map("job_vacancies")
+}
+
+model Application {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  jobVacancyId Int
+  coverLetter  String?
+  status       String    @default("PENDING") // PENDING, REVIEWED, ACCEPTED, or REJECTED
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobVacancy   JobVacancy @relation(fields: [jobVacancyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobVacancyId])
+  @@map("applications")
+}

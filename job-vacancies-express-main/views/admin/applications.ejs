@@ -1,0 +1,182 @@
+<div class="admin-header">
+  <h1>Job Applications</h1>
+  <a href="/admin/vacancies" class="btn-secondary">← Back to Vacancies</a>
+</div>
+
+<div id="loading" class="loading">Loading applications...</div>
+<div id="error-message" class="error-message" style="display: none;"></div>
+
+<div id="job-info" class="job-info-card" style="display: none;">
+  <h3 id="job-title"></h3>
+  <p id="job-company"></p>
+</div>
+
+<table class="admin-table" id="applications-table" style="display: none;">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Applicant Name</th>
+      <th>Applicant Email</th>
+      <th>Status</th>
+      <th>Applied Date</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="applications-tbody">
+  </tbody>
+</table>
+
+<div id="application-detail-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2>Application Details</h2>
+    <div id="application-detail-content"></div>
+  </div>
+</div>
+
+<script>
+  const vacancyId = '<%= vacancyId %>';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadApplications();
+  });
+
+  async function loadApplications() {
+    try {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('error-message').style.display = 'none';
+      
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/admin/vacancies/${vacancyId}/applications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        window.location.href = '/auth/login';
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load applications');
+      }
+
+      // Display job info
+      document.getElementById('job-title').textContent = data.vacancy.title;
+      document.getElementById('job-company').textContent = data.vacancy.company;
+      document.getElementById('job-info').style.display = 'block';
+
+      displayApplications(data.applications);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('applications-table').style.display = 'table';
+    } catch (error) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-message').style.display = 'block';
+      document.getElementById('error-message').textContent = error.message;
+    }
+  }
+
+  function displayApplications(applications) {
+    const tbody = document.getElementById('applications-tbody');
+    if (applications.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center">No applications found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = applications.map(app => `
+      <tr>
+        <td>${app.id}</td>
+        <td>${escapeHtml(app.user.name)}</td>
+        <td>${escapeHtml(app.user.email)}</td>
+        <td><span class="badge badge-${app.status.toLowerCase()}">${app.status}</span></td>
+        <td>${new Date(app.createdAt).toLocaleDateString()}</td>
+        <td>
+          <button onclick="viewApplication(${app.id})" class="btn-sm btn-primary">View</button>
+          <select onchange="updateStatus(${app.id}, this.value)" class="status-select">
+            <option value="PENDING" ${app.status === 'PENDING' ? 'selected' : ''}>Pending</option>
+            <option value="REVIEWED" ${app.status === 'REVIEWED' ? 'selected' : ''}>Reviewed</option>
+            <option value="ACCEPTED" ${app.status === 'ACCEPTED' ? 'selected' : ''}>Accepted</option>
+            <option value="REJECTED" ${app.status === 'REJECTED' ? 'selected' : ''}>Rejected</option>
+          </select>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function viewApplication(applicationId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/applications/${applicationId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load application details');
+      }
+
+      const app = await response.json();
+      const content = document.getElementById('application-detail-content');
+      content.innerHTML = `
+        <div class="application-detail">
+          <h3>Applicant Information</h3>
+          <p><strong>Name:</strong> ${escapeHtml(app.user.name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(app.user.email)}</p>
+          <p><strong>Status:</strong> <span class="badge badge-${app.status.toLowerCase()}">${app.status}</span></p>
+          <p><strong>Applied:</strong> ${new Date(app.createdAt).toLocaleString()}</p>
+          ${app.coverLetter ? `<h3>Cover Letter</h3><div class="cover-letter">${formatText(app.coverLetter)}</div>` : '<p><em>No cover letter provided</em></p>'}
+        </div>
+      `;
+      document.getElementById('application-detail-modal').style.display = 'block';
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  }
+
+  async function updateStatus(applicationId, status) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/applications/${applicationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update status');
+      }
+
+      alert('Application status updated successfully');
+      loadApplications();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('application-detail-modal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('application-detail-modal');
+    if (event.target == modal) {
+      closeModal();
+    }
+  }
+
+  function formatText(text) {
+    return escapeHtml(text).replace(/\n/g, '<br>');
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>

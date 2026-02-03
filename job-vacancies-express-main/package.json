@@ -1,0 +1,38 @@
+{
+  "name": "job-vacancies",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "nodemon ./bin/www",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "node prisma/seed.js",
+    "test": "npx jest --coverage",
+    "test:watch": "npx jest --watch",
+    "test:unit": "npx jest tests/unit",
+    "test:integration": "npx jest tests/integration"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "dotenv": "^17.2.3",
+    "ejs": "~2.6.1",
+    "express": "~4.16.1",
+    "express-ejs-layouts": "^2.5.1",
+    "http-errors": "~1.6.3",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "~1.9.1",
+    "nodemon": "^3.1.11"
+  },
+  "devDependencies": {
+    "jest": "^27.5.1",
+    "prisma": "^5.7.1",
+    "supertest": "^7.1.4"
+  }
+}

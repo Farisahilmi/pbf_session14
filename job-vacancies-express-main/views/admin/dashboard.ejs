@@ -1,0 +1,98 @@
+<div class="flex justify-between items-center mb-8 flex-wrap gap-4">
+  <div>
+    <h1 class="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+    <p class="text-gray-600 text-lg">Manage users and job vacancies</p>
+  </div>
+</div>
+
+<div id="loading" class="text-center py-8 text-gray-600">Loading dashboard...</div>
+<div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden"></div>
+
+<div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 hidden">
+  <div class="bg-white rounded-lg shadow-md p-6 text-center">
+    <h3 class="text-sm text-gray-600 mb-2">Total Users</h3>
+    <p class="text-3xl font-bold text-blue-600" id="total-users">-</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-6 text-center">
+    <h3 class="text-sm text-gray-600 mb-2">Total Jobs</h3>
+    <p class="text-3xl font-bold text-blue-600" id="total-jobs">-</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-6 text-center">
+    <h3 class="text-sm text-gray-600 mb-2">Total Applications</h3>
+    <p class="text-3xl font-bold text-blue-600" id="total-applications">-</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-6 text-center">
+    <h3 class="text-sm text-gray-600 mb-2">Active Jobs</h3>
+    <p class="text-3xl font-bold text-blue-600" id="active-jobs">-</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <a href="/admin/users" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <h3 class="text-xl font-semibold mb-2 text-gray-900">👥 Manage Users</h3>
+    <p class="text-gray-600">View, create, edit, and delete users</p>
+  </a>
+  <a href="/admin/vacancies" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <h3 class="text-xl font-semibold mb-2 text-gray-900">💼 Manage Job Vacancies</h3>
+    <p class="text-gray-600">Create and manage job postings</p>
+  </a>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadDashboardStats();
+  });
+
+  async function loadDashboardStats() {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/auth/login';
+        return;
+      }
+
+      // Load users count
+      const usersRes = await fetch('/api/admin/users?limit=1', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        document.getElementById('total-users').textContent = usersData.pagination.total;
+      }
+
+      // Load vacancies count
+      const vacanciesRes = await fetch('/api/admin/vacancies?limit=1', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (vacanciesRes.ok) {
+        const vacanciesData = await vacanciesRes.json();
+        document.getElementById('total-jobs').textContent = vacanciesData.pagination.total;
+        
+        // Count active jobs
+        const activeRes = await fetch('/api/admin/vacancies?status=ACTIVE&limit=1', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (activeRes.ok) {
+          const activeData = await activeRes.json();
+          document.getElementById('active-jobs').textContent = activeData.pagination.total;
+        }
+      }
+
+      // Load applications count (from vacancies)
+      const applicationsRes = await fetch('/api/admin/applications?limit=1', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (applicationsRes.ok) {
+        const applicationsData = await applicationsRes.json();
+        document.getElementById('total-applications').textContent = applicationsData.pagination?.total || 0;
+      }
+
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('dashboard-stats').classList.remove('hidden');
+    } catch (error) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('error-message').classList.remove('hidden');
+      document.getElementById('error-message').textContent = error.message;
+    }
+  }
+</script>
